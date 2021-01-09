@@ -190,6 +190,11 @@
 /// `jni-sys` re-exports
 pub mod sys;
 
+pub mod djl;
+
+#[macro_use]
+extern crate dlopen_derive;
+
 mod wrapper {
     mod version;
     pub use self::version::*;

@@ -10,8 +10,9 @@ use log::{debug, error};
 
 use crate::{errors::*, sys, JNIEnv};
 
-#[cfg(feature = "invocation")]
 use crate::InitArgs;
+use crate::djl::JvmLibrary;
+use dlopen::wrapper::Container;
 
 /// The Java VM, providing [Invocation API][invocation-api] support.
 ///
@@ -158,6 +159,30 @@ impl JavaVM {
                 &mut env as *mut *mut sys::JNIEnv as *mut *mut c_void,
                 args.inner_ptr(),
             ))?;
+
+            let vm = Self::from_raw(ptr)?;
+            java_vm_unchecked!(vm.0, DetachCurrentThread);
+
+            Ok(vm)
+        }
+    }
+
+    /// Create JavaVM from a dynamic library
+    #[cfg(not(feature = "invocation"))]
+    pub fn new(args: InitArgs, lib: Container<JvmLibrary>) -> Result<Self> {
+        use std::os::raw::c_void;
+
+        let mut ptr: *mut sys::JavaVM = ::std::ptr::null_mut();
+        let mut env: *mut sys::JNIEnv = ::std::ptr::null_mut();
+
+        unsafe {
+            jni_error_code_to_result(crate::djl::jni_create_java_vm(
+                lib,
+                &mut ptr as *mut _,
+                &mut env as *mut *mut sys::JNIEnv as *mut *mut c_void,
+                args.inner_ptr(),
+            ))?;
+
 
             let vm = Self::from_raw(ptr)?;
             java_vm_unchecked!(vm.0, DetachCurrentThread);
